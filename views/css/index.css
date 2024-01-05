@@ -1,0 +1,37 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.section-form {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 96vh;
+}
+
+.common-form {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.3rem;
+
+  p {
+    text-align: center;
+  }
+}
+
+.langue-section {
+  background-color: rgba(185, 240, 103, 0.926);
+}
+
+.theme-section {
+  background-color: rgba(103, 240, 233, 0.926);
+}
+
+.word-section {
+  background-color: rgba(103, 114, 240, 0.926);
+}

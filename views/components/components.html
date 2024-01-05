@@ -1,0 +1,83 @@
+{{define "form-traduction"}}
+<div class="traduction-section common-form">
+  <form>
+    <select name="word" id="word" hx-get></select>
+    {{.csrfField}}
+  </form>
+</div>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "head"}}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel</title>
+  <script defer src="/static/javascript/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/css/index.css" />
+</head>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "form-word"}}
+<div class="word-section common-form">
+  <p>Create word by theme and by language</p>
+  <form hx-post="/admin/panel/word-theme" hx-swap="none">
+    <select name="language" hx-get="/admin/panel/languages" hx-swap="beforeend" hx-trigger="load">
+      <option value>Options Langue</option>
+    </select>
+    <select name="theme" hx-get="/admin/panel/languages-themes" hx-swap="innerHTML"
+      hx-trigger="change from:previous select" hx-include="previous select">
+      <option value="">Options theme</option>
+    </select>
+    <input name="word" placeholder="word" required />
+    {{.csrfField}}
+    <input type="submit" value="add" />
+  </form>
+</div>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "form-theme"}}
+<div class="theme-section common-form">
+  <p>Create theme</p>
+  <form hx-post>
+    <select name id hx-get="/admin/panel/languages" hx-trigger="load"></select>
+  </form>
+</div>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "form-langue"}}
+<div class="langue-section common-form">
+  <p>Langue</p>
+  <form hx-post="/admin/panel/langue" hx-swap="afterbegin" hx-target="#ul-langue" class="form">
+    <div>
+      <label for="langue">langue</label>
+      <input type="text" name="langue" placeholder="langue" required />
+    </div>
+    <div>
+      <div>
+        <label for="disponible">Disponible</label>
+        <input type="radio" name="disponible" value="available" />
+      </div>
+      <div>
+        <label for="disponible">Undisponible </label>
+        <input type="radio" name="disponible" value="unavailable" />
+      </div>
+    </div>
+    {{.csrfField}}
+    <input type="submit" class="sumbit" />
+    <input type="reset" />
+  </form>
+  <ul id="ul-langue"></ul>
+</div>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "li-langue"}}
+<li>{{.Name}} - {{.Status}}</li>
+{{end}}
+<!---------------------------------------------------------------------->
+{{define "options-languages"}} {{range .}}
+<option value="{{.ID}}">{{.Name}}</option>
+{{end}} {{end}}
+<!---------------------------------------------------------------------->
+<select>
+</select>

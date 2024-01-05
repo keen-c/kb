@@ -1,0 +1,14 @@
+<body>
+  <section>
+    <form method="post">
+      <label for="email">Email</label>
+      <input type="email" name="email" required>
+      <label for="password">Password :</label>
+      <input type="password" name="password" autocomplete="current-password" required>
+      {{.csrfField}}
+      <input type="submit">
+    </form>
+  </section>
+</body>
+
+</html>
