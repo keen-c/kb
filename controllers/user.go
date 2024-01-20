@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"kb/kb/models"
 	"log"
 	"net/http"
@@ -34,7 +33,7 @@ func (uc *UserControllers) Create(w http.ResponseWriter, r *http.Request) {
 	err := decodeJSONBody(w, r, &u)
 	if err != nil {
 		log.Printf("creating user %s", err)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	b, err := uc.Um.FindUserByEmail(r.Context(), u.Email)
@@ -48,6 +47,7 @@ func (uc *UserControllers) Create(w http.ResponseWriter, r *http.Request) {
 			Message: "Cet email a dèjà utilisé",
 		}
 		JsonError(w, m, http.StatusBadRequest)
+		return
 	}
 	if u.Password != u.RepeatPassword {
 		m := ErrorMessage{
@@ -76,8 +76,8 @@ func (uc *UserControllers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	SetCookie(w, session, s.Token)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (uc *UserControllers) UserByToken(w http.ResponseWriter, r *http.Request) {
@@ -113,8 +113,21 @@ func (uc *UserControllers) CreateWithGoogleCallback(w http.ResponseWriter, r *ht
 		return
 	}
 	if b {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Cet email est dèja utilisé")
+		id, err := uc.Um.GetUserID(r.Context(), u.Email)
+		if err != nil {
+			log.Printf("%s", http.ErrBodyReadAfterClose)
+			http.Error(w, "ServerError", http.StatusInternalServerError)
+			return
+		}
+		s, err := uc.SM.CreateSession(r.Context(), id)
+		if err != nil {
+			log.Printf("%s", err)
+			http.Error(w, "ServerError", http.StatusInternalServerError)
+			return
+		}
+		SetCookie(w, session, s.Token)
+
+		http.Redirect(w, r, "http://localhost:5173/", http.StatusSeeOther)
 		return
 	}
 	pseudo, err := ExtractUsernameFromEmail(u.Email)
@@ -173,27 +186,4 @@ func (uc *UserControllers) Connexion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SetCookie(w, session, s.Token)
-}
-func (uc *UserControllers) HandlePostChooseLanguage(w http.ResponseWriter, r *http.Request) {
-	l := chi.URLParam(r, "language")
-	err := uc.Lm.UserLangueSelection(r.Context(), l)
-	if err != nil {
-		log.Printf("%s", err)
-		if errors.Is(err, sql.ErrNoRows) {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-}
-func (uc *UserControllers) HandleGetGame(w http.ResponseWriter, r *http.Request) {
-	id, err := uc.Lm.GetCurrentTheme(r.Context())
-	if err != nil {
-		log.Printf("%s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Printf("%s", id)
-
 }

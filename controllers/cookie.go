@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	session = "session_id"
+	session = "_s01s"
 )
 
 func SetCookie(w http.ResponseWriter, name, value string) {

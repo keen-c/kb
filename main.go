@@ -76,11 +76,12 @@ func main() {
 		r.Post("/create", uc.Create)
 		r.Post("/connexion", uc.Connexion)
 		r.Get("/userbytoken/{token}", uc.UserByToken)
-		r.Get("/languages", uc.HandleGetAvailableLanguages)
-		r.With(mw.GetCurrentUser).Post("/choose/{language}", uc.HandlePostChooseLanguage)
 	})
 	r.Route("/language", func(r chi.Router) {
-		r.With(mw.GetCurrentUser).Get("/", lc.HandleGetThemeByLanguage)
+		r.With(mw.GetCurrentUser).Get("/", lc.HandleGetGame)
+		r.With(mw.GetCurrentUser).Post("/select/{language}", lc.HandlePostChooseLanguage)
+		r.With(mw.GetCurrentUser).Get("/available", uc.HandleGetAvailableLanguages)
+		r.With(mw.GetCurrentUser).Post("/", lc.HandlePostGame)
 	})
 
 	r.Route("/admin", func(r chi.Router) {

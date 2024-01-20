@@ -111,3 +111,12 @@ func (um *UserManager) Connexion(ctx context.Context, email, password string) (s
 	}
 	return id, nil
 }
+func (uc *UserManager)GetUserID(ctx context.Context, email string)(string, error) {
+  query := `select id from users where email = $1`
+  var id string
+  err := uc.DB.QueryRowContext(ctx, query, email).Scan(&id)
+  if err != nil {
+    return "", fmt.Errorf("%w", err)
+  }
+  return id, nil 
+}
