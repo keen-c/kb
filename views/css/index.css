@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+input[type="text"]::placeholder {
+  text-align: center;
+}
+
+input[type="submit"] {
+  min-width: 100px;
+}
+
 .section-form {
   display: flex;
   justify-content: space-around;
@@ -34,4 +42,53 @@
 
 .word-section {
   background-color: rgba(103, 114, 240, 0.926);
+}
+
+.vertical {
+  display: flex;
+  flex-direction: column;
+}
+
+.horizontal {
+  display: flex;
+  flex-direction: row;
+}
+
+.custom-label {
+  font-family: sans-serif;
+  font-weight: 300;
+  text-align: center;
+}
+
+.container-form {
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.custom {
+  padding: 8px 5px;
+  border-radius: 5px;
+  background: none;
+  border: 1px solid black;
+  text-align: center;
+}
+
+.blue-team {
+  border: 1px solid #4a89ed;
+  color: #6498eb;
+}
+
+.purple-team {
+  border: 1px solid #a549ec;
+  color: #ac5ce9;
+}
+
+.hit {
+  border: 1px solid #34a853;
+  color: #40ca65;
+}
+
+.hit:hover {
+  background-color: #34a853;
+  color: #ECB049;
 }

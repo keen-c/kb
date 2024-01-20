@@ -35,9 +35,10 @@ type UserCreate struct {
 	RepeatPassword string `json:"repeat_password"`
 }
 type User struct {
-	ID     string `json:"id"`
-	Pseudo string `json:"pseudo"`
-	Email  string `json:"email"`
+	ID       string `json:"id"`
+	Pseudo   string `json:"pseudo"`
+	Email    string `json:"email"`
+	password string
 }
 type UserManager struct {
 	DB *sql.DB
@@ -96,4 +97,17 @@ func (um *UserManager) FindUserByEmail(ctx context.Context, email string) (bool,
 		return false, fmt.Errorf("%w", err)
 	}
 	return exists, nil
+}
+func (um *UserManager) Connexion(ctx context.Context, email, password string) (string, error) {
+	query := "select id, password_hashed from users where email = $1"
+	var id, p string
+	err := um.DB.QueryRowContext(ctx, query, email).Scan(&id, &p)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	err = CompareHashedPassword(password, p)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	return id, nil
 }

@@ -1,8 +1,41 @@
+{{define "form-word-traduction"}}
+<form hx-post="/admin/panel/word-theme" hx-swap="none" id="fwt">
+  <div class="horizontal container-form">
+    <div class="language vertical">
+      <label for="language" class="custom-label">Langue</label>
+      <select hx-get="/admin/panel/languages" hx-trigger="load" hx-swap="beforeend" name="language" id="language"
+        class="custom blue-team">
+        <option value="">Iles</option>
+      </select>
+    </div>
+    <div class="vertical">
+      <label for="theme" class="custom-label">Theme</label>
+      <select hx-get="/admin/panel/languages-themes" hx-trigger="change from:previous select"
+        hx-include="previous select" hx-swap="innerHTML" name="theme" id="theme" class="custom blue-team">
+        <option value="">Theme</option>
+      </select>
+    </div>
+    <div class="vertical">
+      <label for="word" class="custom-label"> Mots </label>
+      <input type="text" class="custom purple-team" name="word" value placeholder="Mot" required>
+    </div>
+    <div class="vertical">
+      <label for="translation" class="custom-label">Traduction</label>
+      <input type="text" class="custom purple-team" placeholder="Traduction" name="translation" value>
+    </div>
+    <div class="vertical">
+      <label for="submit" class="custom-label">Envoyer</label>
+      <input type="submit" name="submit" class="custom hit" value="HOT HIT 🔥">
+    </div>
+  </div>
+</form>
+{{end}}
+<!---------------------------------------------------------------------->
 {{define "form-traduction"}}
 <div class="traduction-section common-form">
   <form>
     <select name="word" id="word" hx-get></select>
-    {{.csrfField}}
+
   </form>
 </div>
 {{end}}
@@ -27,10 +60,10 @@
     </select>
     <select name="theme" hx-get="/admin/panel/languages-themes" hx-swap="innerHTML"
       hx-trigger="change from:previous select" hx-include="previous select">
-      <option value="">Options theme</option>
+      <option value>Options theme</option>
     </select>
     <input name="word" placeholder="word" required />
-    {{.csrfField}}
+
     <input type="submit" value="add" />
   </form>
 </div>
@@ -63,7 +96,7 @@
         <input type="radio" name="disponible" value="unavailable" />
       </div>
     </div>
-    {{.csrfField}}
+
     <input type="submit" class="sumbit" />
     <input type="reset" />
   </form>
@@ -79,5 +112,3 @@
 <option value="{{.ID}}">{{.Name}}</option>
 {{end}} {{end}}
 <!---------------------------------------------------------------------->
-<select>
-</select>

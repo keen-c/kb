@@ -16,7 +16,7 @@ func SetCookie(w http.ResponseWriter, name, value string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteDefaultMode,
+		SameSite: http.SameSiteNoneMode,
 	}
 	http.SetCookie(w, cookie)
 }

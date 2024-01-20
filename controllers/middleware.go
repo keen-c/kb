@@ -18,13 +18,13 @@ func (m *Middleware) GetCurrentUser(next http.Handler) http.Handler {
 		c, err := ReadCookie(r, session)
 		if err != nil {
 			log.Println("Cookie error :", err)
-			http.Redirect(w, r, "/login", http.StatusMovedPermanently)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		u, err := m.Sm.FindUserByCookie(ctx, c.Value)
 		if err != nil {
 			http.Error(w, "User not found", http.StatusNotFound)
-			http.Redirect(w, r, "/login", http.StatusMovedPermanently)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		ctx = models.SetUserContext(ctx, u)
@@ -39,14 +39,13 @@ func (m *Middleware) GetCurrentAdmin(next http.Handler) http.Handler {
 		c, err := ReadCookie(r, session)
 		if err != nil {
 			log.Printf("Cookie error %s :", err)
-			http.Redirect(w, r, "/admin/connexion", http.StatusMovedPermanently)
+			http.Redirect(w, r, "/admin/connexion", http.StatusSeeOther)
 			return
 		}
 		a, err := m.Sm.FindAdminByCookie(ctx, c.Value)
 		if err != nil {
 			log.Printf("find admin by cookie %s", err)
-			http.Error(w, "User not found", http.StatusNotFound)
-			http.Redirect(w, r, "/admin/connexion", http.StatusMovedPermanently)
+			http.Redirect(w, r, "/admin/connexion", http.StatusSeeOther)
 			return
 		}
 		ctx = models.SetAdminContext(ctx, a)

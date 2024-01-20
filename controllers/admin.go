@@ -1,14 +1,13 @@
 package controllers
 
 import (
+	"fmt"
 	"html/template"
 	"kb/kb/models"
 	"kb/kb/views"
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/gorilla/csrf"
 )
 
 type AdminControllers struct {
@@ -19,9 +18,7 @@ type AdminControllers struct {
 
 func (ac *AdminControllers) HandleGetConnexion(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFS(views.Static, "connexion.html"))
-	if err := t.Execute(w, map[string]interface{}{
-		csrf.TemplateTag: csrf.TemplateField(r),
-	}); err != nil {
+	if err := t.Execute(w, nil); err != nil {
 		log.Printf("%s", err)
 		http.Error(w, ServerError, http.StatusInternalServerError)
 	}
@@ -53,9 +50,7 @@ func (ac *AdminControllers) HandleGetPanel(w http.ResponseWriter, r *http.Reques
 			"components/components.html",
 		),
 	)
-	if err := t.Execute(w, map[string]interface{}{
-		csrf.TemplateTag: csrf.TemplateField(r),
-	}); err != nil {
+	if err := t.Execute(w, nil); err != nil {
 		http.Error(w, ServerError, http.StatusInternalServerError)
 	}
 }
@@ -76,8 +71,7 @@ func (ac *AdminControllers) HandlePostLanguage(w http.ResponseWriter, r *http.Re
 		return
 	}
 }
-
-func (ac *AdminControllers) HandleGetLanguage(w http.ResponseWriter, r *http.Request) {
+func (ac *AdminControllers) HandleGetLanguages(w http.ResponseWriter, r *http.Request) {
 	l, err := ac.Lm.QueryAvailableLanguage(r.Context())
 	if err != nil {
 		log.Printf("error querying available language %s", err)
@@ -119,7 +113,9 @@ func (ac *AdminControllers) HandlePostWordByTheme(w http.ResponseWriter, r *http
 	lan := r.FormValue("language")
 	th := r.FormValue("theme")
 	wd := strings.TrimSpace(strings.ToLower(r.FormValue("word")))
-	err := ac.Lm.CreateWordByThemeByLangue(r.Context(), lan, th, wd)
+	tra := strings.TrimSpace(strings.ToLower(r.FormValue("translation")))
+	fmt.Println(lan, th, wd, tra)
+	err := ac.Lm.InsertWordAndTraduction(r.Context(), lan, th, wd, tra)
 	if err != nil {
 		log.Printf("%s", err)
 		return

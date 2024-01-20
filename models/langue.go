@@ -27,6 +27,7 @@ type LanguageManager struct {
 	DB *sql.DB
 }
 
+// Query all the languages with the status available to true
 func (lm *LanguageManager) QueryAvailableLanguage(ctx context.Context) (*[]Language, error) {
 	query := `select id, name from languages where languages.status = 'available'`
 	rows, err := lm.DB.QueryContext(ctx, query)
@@ -51,6 +52,7 @@ func (lm *LanguageManager) QueryAvailableLanguage(ctx context.Context) (*[]Langu
 	return &languages, nil
 }
 
+// Insert user-selected language into database
 func (lm *LanguageManager) UserLangueSelection(ctx context.Context, langueId string) error {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
@@ -64,6 +66,7 @@ func (lm *LanguageManager) UserLangueSelection(ctx context.Context, langueId str
 	return nil
 }
 
+// Query themes associated with the given langueId and the published is set to true
 func (lm *LanguageManager) QueryTheme(ctx context.Context, langueId string) (*Theme, error) {
 	query := `SELECT id, name FROM themes WHERE language_id = $1 AND published = TRUE ORDER BY created_at LIMIT 1;
 `
@@ -75,6 +78,7 @@ func (lm *LanguageManager) QueryTheme(ctx context.Context, langueId string) (*Th
 	return &t, nil
 }
 
+// Query the langue associated with the user id, user id is provided with the context
 func (lm *LanguageManager) QueryUserLangue(ctx context.Context) (string, error) {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
@@ -89,6 +93,7 @@ func (lm *LanguageManager) QueryUserLangue(ctx context.Context) (string, error) 
 	return lang, nil
 }
 
+// Query the id of the given language
 func (lm *LanguageManager) QueryIDLanguage(ctx context.Context, languageID string) (string, error) {
 	var id string
 	query := `select id from languages where name = $1;`
@@ -99,6 +104,7 @@ func (lm *LanguageManager) QueryIDLanguage(ctx context.Context, languageID strin
 	return id, nil
 }
 
+// Query all the words associated with a given theme
 func (lm *LanguageManager) GetWordByTheme(ctx context.Context, themeID string) (*Word, error) {
 	query := `select w.id, w.word, w.language_id, w.theme_id, t.translation from words w left join translations t on t.word_id = w.id where w.theme_id = $1 limit 1;;`
 	var w Word
@@ -136,6 +142,7 @@ func (lm *LanguageManager) GetTheResponse(
 	return b, nil
 }
 
+// Query all the themes associated with a specific language
 func (Lm *LanguageManager) QueryThemeByLangue(
 	ctx context.Context,
 	language_id string,
@@ -164,6 +171,7 @@ func (Lm *LanguageManager) QueryThemeByLangue(
 	return &t, nil
 }
 
+// Create a theme with language_id as reference
 func (lm *LanguageManager) CreateThemeByLangue(
 	ctx context.Context,
 	langue_id, theme string,
@@ -176,6 +184,8 @@ func (lm *LanguageManager) CreateThemeByLangue(
 	return nil
 }
 
+// Create a word with a theme_id and language_id as references
+// if fail return a err
 func (lm *LanguageManager) CreateWordByThemeByLangue(
 	ctx context.Context,
 	langue_id, theme_id, word string,
@@ -184,6 +194,38 @@ func (lm *LanguageManager) CreateWordByThemeByLangue(
 	_, err := lm.DB.ExecContext(ctx, query, langue_id, theme_id, word)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// Get the current theme of the user
+func (ac *LanguageManager) GetCurrentTheme(ctx context.Context) (string, error) {
+	u, err := GetUserByContext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	var id string
+	query := `select theme_id from user_current_theme where user_id = $1`
+	err = ac.DB.QueryRowContext(ctx, query, u.ID).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+	return id, nil
+}
+
+// Insert a word with his translation associated with a given theme
+// return nil if success, error if fail
+func (ac *LanguageManager) InsertWordAndTraduction(ctx context.Context, languageID, themeID, word, translation string) error {
+	query := `insert into words(language_id, theme_id, word) values ($1, $2, $3) returning id`
+	query2 := `insert into translations (word_id, translation) values ($1, $2)`
+	var id string
+	err := ac.DB.QueryRowContext(ctx, query, languageID, themeID, word).Scan(&id)
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
+	_, err = ac.DB.ExecContext(ctx, query2, id, translation)
+	if err != nil {
+		return fmt.Errorf("%s", err)
 	}
 	return nil
 }
