@@ -18,6 +18,12 @@ func (mr *malformedRequest) Error() string {
 	return mr.msg
 }
 
+func HttpInternalError(w http.ResponseWriter, err error) {
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
 func JsonError(w http.ResponseWriter, error interface{}, code int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -27,7 +33,16 @@ func JsonError(w http.ResponseWriter, error interface{}, code int) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	return
+}
+func JsonSendGame(w http.ResponseWriter, game interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(game)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst interface{}) error {

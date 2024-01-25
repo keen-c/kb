@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-type AdminCtxKey string
+
 
 const (
 	AdminKey AdminCtxKey = "admin"

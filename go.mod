@@ -15,6 +15,7 @@ require (
 require (
 	cloud.google.com/go v0.67.0 // indirect
 	github.com/a-h/templ v0.2.501 // indirect
+	github.com/go-chi/chi v1.5.5
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/csrf v1.7.2 // indirect

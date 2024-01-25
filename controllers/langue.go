@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"kb/kb/models"
 	"log"
@@ -14,86 +13,7 @@ import (
 type LangueController struct {
 	Lm *models.LanguageManager
 }
-type Game struct {
-	Theme string          `json:"theme"`
-	Game  models.Question `json:"game"`
-}
 
-func (lc *LangueController) HandleGetGame(w http.ResponseWriter, r *http.Request) {
-	th_id, err := lc.Lm.GetCurrentTheme(r.Context())
-	if err != nil {
-		log.Printf("%s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	th_name, err := lc.Lm.QueryNameTheme(r.Context(), th_id)
-	if err != nil {
-		log.Printf("%s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	q, err := lc.Lm.GetUserCurrentQueux(r.Context())
-	if errors.Is(err, sql.ErrNoRows) {
-		five, err := lc.Lm.GetFiveWordFromTheCurrentTheme(r.Context())
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		b, err := json.Marshal(five)
-		if err != nil {
-			log.Printf("%s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = lc.Lm.SeUserCurrentQueux(r.Context(), b)
-		if err != nil {
-			log.Printf("set user queux %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		games := Game{
-			Theme: th_name,
-			Game:  (*five)[0],
-		}
-		err = json.NewEncoder(w).Encode(games)
-		if err != nil {
-			log.Printf("error on encode : %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-	games := Game{
-		Theme: th_name,
-		Game:  (*q)[0],
-	}
-	err = json.NewEncoder(w).Encode(games)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-}
-func (lc *LangueController) HandlePostGame(w http.ResponseWriter, r *http.Request) {
-	var answer models.Answer
-	err := decodeJSONBody(w, r, &answer)
-	if err != nil {
-		log.Printf("%s", err)
-		return
-	}
-	q, err := lc.Lm.GetUserCurrentQueux(r.Context())
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	b, err := lc.Lm.CheckTheAnswer(r.Context(), answer.Answer, (*q)[0].AssociatedTranslation)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if b == true {
-
-	}
-}
 func (lc *LangueController) HandlePostChooseLanguage(w http.ResponseWriter, r *http.Request) {
 	l := chi.URLParam(r, "language")
 	err := lc.Lm.UserLangueSelection(r.Context(), l)
@@ -104,6 +24,129 @@ func (lc *LangueController) HandlePostChooseLanguage(w http.ResponseWriter, r *h
 			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+func (lc *LangueController) HandleGetGame(w http.ResponseWriter, r *http.Request) {
+	q, err := lc.Lm.GetUserCurrentQueue(r.Context())
+	if err != nil {
+		switch err.Error() {
+		case models.UnexpectedErrorJson:
+			five, err := lc.Lm.GetFiveWordFromTheCurrentTheme(r.Context())
+			if err != nil {
+				log.Printf("%s", err)
+				HttpInternalError(w, err)
+				return
+			}
+			b, err := five.Marshall()
+			if err != nil {
+				log.Printf("%s", err)
+				HttpInternalError(w, err)
+				return
+			}
+			if err := lc.Lm.UpdateQueue(r.Context(), b); err != nil {
+				log.Printf("%s", err)
+				HttpInternalError(w, err)
+				return
+			}
+			g := Game{
+				Game: *five.First(),
+			}
+			JsonSendGame(w, g)
+			return
+		default:
+			HttpInternalError(w, err)
+			return
+		}
+	}
+	g := Game{
+		Game: *q.First(),
+	}
+	JsonSendGame(w, g)
+}
+
+func (lc *LangueController) HandlePostGame(w http.ResponseWriter, r *http.Request) {
+	answer_id := chi.URLParam(r, "answer")
+	q, err := lc.Lm.GetUserCurrentQueue(r.Context())
+	if err != nil {
+		log.Printf("%s", err)
+		HttpInternalError(w, err)
+		return
+	}
+	b, err := lc.Lm.CheckTheAnswer(r.Context(), answer_id, q.First().AssociatedTranslation)
+	if err != nil {
+		log.Printf("%s", err)
+		HttpInternalError(w, err)
+		return
+	}
+	switch b {
+	case true:
+		q.Dequeue()
+		if q.Len() == 0 {
+			next, err := lc.Lm.GetFiveWordFromTheCurrentTheme(r.Context())
+			if errors.Is(err, sql.ErrNoRows) {
+				t, err := lc.Lm.GetCurrentTheme(r.Context())
+				if err != nil {
+					HttpInternalError(w, err)
+					return
+				}
+				if err = lc.Lm.InsertThemeDone(r.Context(), t.ID); err != nil {
+					log.Printf("%s", err)
+					HttpInternalError(w, err)
+					return
+				}
+				lc.HandleGetGame(w, r)
+				return
+			}
+			b, err := next.Marshall()
+			if err != nil {
+				HttpInternalError(w, err)
+				return
+			}
+			if err := lc.Lm.UpdateQueue(r.Context(), b); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			g := Game{
+				Answer: true,
+			}
+			JsonSendGame(w, g)
+			return
+		}
+		m, err := q.Marshall()
+		if err != nil {
+			log.Printf("%s", err)
+			HttpInternalError(w, err)
+			return
+		}
+		if err := lc.Lm.UpdateQueue(r.Context(), m); err != nil {
+			log.Printf("%s", err)
+			HttpInternalError(w, err)
+			return
+		}
+		g := Game{
+			Answer: true,
+			Game:   *q.First(),
+		}
+		JsonSendGame(w, g)
+		return
+	case false:
+		q.SwapEnd()
+		m, err := q.Marshall()
+		if err != nil {
+			HttpInternalError(w, err)
+			return
+		}
+
+		if err := lc.Lm.UpdateQueue(r.Context(), m); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		g := Game{
+			Answer: false,
+		}
+
+		JsonSendGame(w, g)
 		return
 	}
 }

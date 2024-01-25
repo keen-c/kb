@@ -19,6 +19,7 @@ import (
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Panic("cant load env variables :", err)
+		return
 	}
 	db, err := sql.Open(
 		"postgres",
@@ -81,7 +82,7 @@ func main() {
 		r.With(mw.GetCurrentUser).Get("/", lc.HandleGetGame)
 		r.With(mw.GetCurrentUser).Post("/select/{language}", lc.HandlePostChooseLanguage)
 		r.With(mw.GetCurrentUser).Get("/available", uc.HandleGetAvailableLanguages)
-		r.With(mw.GetCurrentUser).Post("/", lc.HandlePostGame)
+		r.With(mw.GetCurrentUser).Post("/{answer}", lc.HandlePostGame)
 	})
 
 	r.Route("/admin", func(r chi.Router) {
@@ -96,7 +97,6 @@ func main() {
 			r.Post("/word-theme", ad.HandlePostWordByTheme)
 		})
 	})
-	log.Println("http://localhost:8080/admin/panel")
 	err = http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Panic(err)

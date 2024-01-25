@@ -8,39 +8,7 @@ import (
 	"log"
 )
 
-type Theme struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-type Answer struct {
-	WordID                  string `json:"w_id,omitempty"`
-	AssociatedTranslationID string `json:"atid,omitempty"`
-	RandomTranslationID     string `json:"rid,omitempty"`
-	Answer                  string `json:"answer"`
-}
-type Question struct {
-	WordID                  string `json:"w_id,omitempty"`
-	Word                    string `json:"word,omitempty"`
-	AssociatedTranslationID string `json:"atid,omitempty"`
-	AssociatedTranslation   string `json:"translation,omitempty"`
-	RandomTranslationID     string `json:"rid,omitempty"`
-	RandomTranslation       string `json:"random,omitempty"`
-}
-type Word struct {
-	ID          string `json:"id"`
-	Word        string `json:"word"`
-	LangId      string `json:"lang_id"`
-	ThemeId     string `json:"theme_id"`
-	Translation string `json:"translation"`
-}
-type Language struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-type LanguageManager struct {
-	DB *sql.DB
-}
+var UnexpectedErrorJson = "unexpected end of JSON input"
 
 // Query all the languages with the status available to true
 func (lm *LanguageManager) QueryAvailableLanguage(ctx context.Context) (*[]Language, error) {
@@ -163,7 +131,7 @@ func (Lm *LanguageManager) QueryThemeByLangue(
 	language_id string,
 ) (*[]Theme, error) {
 	var t []Theme
-	query := "select t.id, t.name from themes t where t.language_id = $1"
+	query := "select t.id, t.name from themes t where t.language_id = $1 order by organize asc"
 	rows, err := Lm.DB.QueryContext(ctx, query, language_id)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -214,18 +182,21 @@ func (lm *LanguageManager) CreateWordByThemeByLangue(
 }
 
 // Get the current theme of the user
-func (ac *LanguageManager) GetCurrentTheme(ctx context.Context) (string, error) {
+func (lm *LanguageManager) GetCurrentTheme(ctx context.Context) (*Theme, error) {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
-	var id string
-	query := `select theme_id from user_current_theme where user_id = $1`
-	err = ac.DB.QueryRowContext(ctx, query, u.ID).Scan(&id)
+	var t Theme
+	query := `select theme_id, themes.name from user_current_theme left join themes on themes.id = user_current_theme.theme_id where user_current_theme.user_id = $1`
+	err = lm.DB.QueryRowContext(ctx, query, u.ID).Scan(&t.ID, &t.Name)
 	if err != nil {
-		return "", fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
-	return id, nil
+	return &t, nil
+}
+func (lm *LanguageManager) QueryAllTheme(ctx context.Context) ([]*Theme, error) {
+	return nil, nil
 }
 
 // Insert a word with his translation associated with a given theme
@@ -244,37 +215,50 @@ func (lm *LanguageManager) InsertWordAndTraduction(ctx context.Context, language
 	}
 	return nil
 }
-func (lm *LanguageManager) SeUserCurrentQueux(ctx context.Context, json []byte) error {
+func (lm *LanguageManager) SetUserCurrentqueue(ctx context.Context, json []byte) error {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
-	query := `insert into user_current_queux (user_id, queux) values ($1, $2)`
+	query := `insert into user_current_queue (user_id, queux) values ($1, $2)`
 	_, err = lm.DB.ExecContext(ctx, query, u.ID, json)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 	return nil
 }
-func (lm *LanguageManager) GetUserCurrentQueux(ctx context.Context) (*[]Question, error) {
+func (lm *LanguageManager) UpdateQueue(ctx context.Context, json []byte) error {
+	query := "update user_current_queue set queue = $1 where user_id = $2"
+	u, err := GetUserByContext(ctx)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	_, err = lm.DB.ExecContext(ctx, query, json, u.ID)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	return nil
+
+}
+func (lm *LanguageManager) GetUserCurrentQueue(ctx context.Context) (*Queux, error) {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	query := `select queux from user_current_queux where user_id = $1`
+	query := `select queue from user_current_queue where user_id = $1`
 	var jsonb []byte
 	err = lm.DB.QueryRowContext(ctx, query, u.ID).Scan(&jsonb)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
-	var queux []Question
-	err = json.Unmarshal(jsonb, &queux)
+	var queue Queux
+	err = json.Unmarshal(jsonb, &queue)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	return &queux, nil
+	return &queue, nil
 }
-func (lm *LanguageManager) GetFiveWordFromTheCurrentTheme(ctx context.Context) (*[]Question, error) {
+func (lm *LanguageManager) GetFiveWordFromTheCurrentTheme(ctx context.Context) (*Queux, error) {
 	u, err := GetUserByContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -283,14 +267,16 @@ func (lm *LanguageManager) GetFiveWordFromTheCurrentTheme(ctx context.Context) (
 	SELECT 
     w.id AS word_id,
     w.word,
-    t.id AS associated_translation_id,
-    t.translation AS associated_translation,
-    tr_random.id AS random_translation_id,
-    tr_random.translation AS random_translation
+    t.id AS assoc_trans_id,  -- Nom raccourci
+    t.translation AS assoc_trans,  -- Nom raccourci
+    tr_random.id AS rand_trans_id,  -- Nom raccourci
+    tr_random.translation AS rand_trans,  -- Nom raccourci
+    th.name AS curr_theme_name  -- Nom raccourci
 FROM 
     words AS w
 JOIN translations AS t ON w.id = t.word_id
 JOIN user_current_theme AS uct ON w.theme_id = uct.theme_id
+JOIN themes AS th ON uct.theme_id = th.id  
 LEFT JOIN LATERAL (
     SELECT 
         tr.id,
@@ -310,9 +296,9 @@ WHERE
         WHERE user_id = $1
     )
 AND uct.user_id = $1
-LIMIT 5
-	`
-	var set []Question
+LIMIT 5`
+
+	var set Queux
 	rows, err := lm.DB.QueryContext(ctx, query, u.ID)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -326,7 +312,7 @@ LIMIT 5
 	}(rows)
 	for rows.Next() {
 		var s Question
-		err = rows.Scan(&s.WordID, &s.Word, &s.AssociatedTranslationID, &s.AssociatedTranslation, &s.RandomTranslationID, &s.RandomTranslation)
+		err = rows.Scan(&s.WordID, &s.Word, &s.AssociatedTranslationID, &s.AssociatedTranslation, &s.RandomTranslationID, &s.RandomTranslation, &s.CurrentTheme)
 		if err != nil {
 			return nil, fmt.Errorf("%w", err)
 		}
@@ -351,4 +337,16 @@ func (lm *LanguageManager) CheckTheAnswer(ctx context.Context, answer_id, transl
 		return false, fmt.Errorf("%w", err)
 	}
 	return answer, nil
+}
+func (lm *LanguageManager) InsertThemeDone(ctx context.Context, id string) error {
+	query := `insert into users_theme_done (user_id, theme_id) values($1, $2)`
+	u, err := GetUserByContext(ctx)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	_, err = lm.DB.ExecContext(ctx, query, u.ID, id)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	return nil
 }
