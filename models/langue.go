@@ -349,4 +349,16 @@ func (lm *LanguageManager) InsertThemeDone(ctx context.Context, id string) error
 		return fmt.Errorf("%w", err)
 	}
 	return nil
+
+}
+func (lm *LanguageManager) InsertWordViews(ctx context.Context, wordID string) error {
+	query := `insert into words_views (user_id, word_id) values ($1,$2)`
+	u, err := GetUserByContext(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err = lm.DB.ExecContext(ctx, query, u.ID, wordID); err != nil {
+		return err
+	}
+	return nil
 }

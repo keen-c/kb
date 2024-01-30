@@ -3,6 +3,7 @@ package controllers
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"kb/kb/models"
 	"log"
 	"net/http"
@@ -84,31 +85,37 @@ func (lc *LangueController) HandlePostGame(w http.ResponseWriter, r *http.Reques
 		q.Dequeue()
 		if q.Len() == 0 {
 			next, err := lc.Lm.GetFiveWordFromTheCurrentTheme(r.Context())
-			if errors.Is(err, sql.ErrNoRows) {
-				t, err := lc.Lm.GetCurrentTheme(r.Context())
-				if err != nil {
-					HttpInternalError(w, err)
-					return
-				}
-				if err = lc.Lm.InsertThemeDone(r.Context(), t.ID); err != nil {
-					log.Printf("%s", err)
-					HttpInternalError(w, err)
-					return
-				}
-				lc.HandleGetGame(w, r)
+			if err != nil {
+				fmt.Println("there is a error")
 				return
 			}
-			b, err := next.Marshall()
+			// if errors.Is(err, sql.ErrNoRows) {
+			// 	t, err := lc.Lm.GetCurrentTheme(r.Context())
+			// 	if err != nil {
+			// 		HttpInternalError(w, err)
+			// 		return
+			// 	}
+			// 	if err = lc.Lm.InsertThemeDone(r.Context(), t.ID); err != nil {
+			// 		log.Printf("%s", err)
+			// 		HttpInternalError(w, err)
+			// 		return
+			// 	}
+			// 	lc.HandleGetGame(w, r)
+			// 	return
+			// }
+			m, err := next.Marshall()
 			if err != nil {
+				log.Printf("%s", err)
 				HttpInternalError(w, err)
 				return
 			}
-			if err := lc.Lm.UpdateQueue(r.Context(), b); err != nil {
+			if err := lc.Lm.UpdateQueue(r.Context(), m); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			g := Game{
 				Answer: true,
+				Game: *next.First(),
 			}
 			JsonSendGame(w, g)
 			return
