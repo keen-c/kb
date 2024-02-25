@@ -34,7 +34,7 @@ func JsonError(w http.ResponseWriter, error interface{}, code int) {
 		return
 	}
 }
-func JsonSendGame(w http.ResponseWriter, game interface{}) {
+func JsonSendGame(w http.ResponseWriter, game Game) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
